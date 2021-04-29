@@ -263,10 +263,8 @@ $(function() {
 	socket.emit('join_room', payload);
 
 	$('#quit').append('<a href="lobby.html?username='+username+'" class="btn btn-danger btn-default active" role="button" aria-pressed="true">Quit</a>');
-
-
-
 });
+
 
 var old_board = [
 	['?', '?', '?', '?', '?', '?', '?', '?'],
@@ -278,7 +276,6 @@ var old_board = [
 	['?', '?', '?', '?', '?', '?', '?', '?'], 
 	['?', '?', '?', '?', '?', '?', '?', '?'] 
 ];
-
 var my_color = ' ';
 var interval_timer;
 
@@ -334,6 +331,22 @@ socket.on('game_update', function(payload) {
 		}}(payload.game.last_move_time)
 		, 1000);
 
+	/* Add suggest button for the correct player */
+	$('#suggest_button').empty();
+	if (payload.game.whose_turn === my_color) {
+		$('#suggest_button').html('<button id="make_suggestion" type="button" class="btn btn-success">Suggested Play</button>');
+	}
+
+	$('#make_suggestion').click(function() {
+		for(row = 0; row < 8; row++) {
+			for(column = 0; column < 8; column++) {
+				if(payload.game.suggested_move[row][column] === my_color.substr(0, 1)) {
+					$('#'+row+'_'+column).toggleClass('suggest');
+				}
+			}
+		}
+	});
+
 	/* Animate changes to the board */
 
 	var blacksum = 0;
@@ -384,11 +397,12 @@ socket.on('game_update', function(payload) {
 			/* Set up interactivity */
 			$('#'+row+'_'+column).off('click');
 			$('#'+row+'_'+column).removeClass('hovered_over');
+			$('#'+row+'_'+column).removeClass('suggest');
 
 			if(payload.game.whose_turn === my_color) {
 				if(payload.game.legal_moves[row][column] === my_color.substr(0, 1)) {
 					$('#'+row+'_'+column).addClass('hovered_over');
-					$('#'+row+'_'+column).click(function(r,c) {
+					$('#'+row+'_'+column).click(function(r, c) {
 						return function() {
 							var payload = {};
 							payload.row = r;
@@ -424,6 +438,7 @@ socket.on('play_token_response', function(payload) {
 
 socket.on('game_over', function(payload) {
 
+	$('#suggest_button').empty();
 	console.log('*** Client Log Message: \'game_over\'\n\tpayload: '+JSON.stringify(payload));
 	/* Check for a good play_token_response */
 	if (payload.result == 'fail') {

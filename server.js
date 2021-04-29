@@ -698,11 +698,13 @@ io.sockets.on('connection', function(socket) {
 			flip_board('w', row, column, game.board);
 			game.whose_turn = 'black';
 			game.legal_moves = calculate_valid_moves('b', game.board);
+			game.suggested_move = suggest('b', game.board);
 		}else if(color == 'black'){
 			game.board[row][column] = 'b';
 			flip_board('b', row, column, game.board);
 			game.whose_turn = 'white';
 			game.legal_moves = calculate_valid_moves('w', game.board);
+			game.suggested_move = suggest('w', game.board);
 		}
 		var d = new Date();
 		game.last_move_time = d.getTime();
@@ -717,7 +719,7 @@ io.sockets.on('connection', function(socket) {
 /*	Code related to the game state	     */
 
 var games = [];
-
+var flips = 0;
 
 function create_new_game() {
 	var new_game = {};
@@ -744,6 +746,7 @@ function create_new_game() {
 		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
 	];
 	new_game.legal_moves = calculate_valid_moves('w', new_game.board);
+	new_game.suggested_move = suggest('w', new_game.board);
 
 	return new_game;
 }
@@ -984,5 +987,74 @@ function send_game_update(socket, game_id, message) {
 				delete game[id];
 			}}(game_id)
 			,60*60*1000);
+	}
+}
+
+function suggest(who, board) {
+
+	var suggest_board = [
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+		[' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
+	];
+	var legal_moves = calculate_valid_moves(who, board);
+	var best_flips = 0;
+	var best_row = 0; 
+	var best_column = 0;
+
+	for(row = 0; row < 8; row++) {
+		for(column = 0; column < 8; column++) {
+			if (legal_moves[row][column] == who) {
+				mock_flip_board(who, row, column, board);
+				if (flips > best_flips) {
+					best_flips = flips;
+					best_row = row;
+					best_column = column;
+				}
+				flips = 0;
+			}
+		}
+	}
+	suggest_board[best_row][best_column] = who;
+	return suggest_board;
+}
+
+function mock_flip_board(who, row, column, board) {
+	mock_flip_line(who, -1, -1, row, column, board);
+	mock_flip_line(who, -1, 0, row, column, board);
+	mock_flip_line(who, -1, 1, row, column, board);
+	mock_flip_line(who, 0, -1, row, column, board);
+	mock_flip_line(who, 0, 1, row, column, board);
+	mock_flip_line(who, 1, -1, row, column, board);
+	mock_flip_line(who, 1, 0, row, column, board);
+	mock_flip_line(who, 1, 1, row, column, board);
+}
+
+function mock_flip_line(who, dr, dc, r, c, board) {
+	if( (r+dr < 0) || (r+dr > 7) ) {
+		return false;
+	}
+	if( (c+dc < 0) || (c+dc > 7) ) {
+		return false;
+	}
+	if(board[r+dr][c+dc] === ' ') {
+		return false;
+	}
+	if(board[r+dr][c+dc] === who) {
+		return true;
+	}
+	else{
+		if(mock_flip_line(who, dr, dc, r+dr, c+dc, board)) {
+			flips++;
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 }

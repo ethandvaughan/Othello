@@ -24,3 +24,8 @@ td.hovered_over:hover {
 	background: url('../images/hover.gif');
 	background-size: 100% 100%;
 }
+
+td.suggest {
+	background: url('../images/suggest.gif');
+	background-size: 100% 100%;
+}
